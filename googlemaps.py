@@ -306,6 +306,11 @@ class GoogleMapsScraper:
     def __get_driver(self):
         self.logger.info('iniciando webdriver')
         options = webdriver.ChromeOptions()
+        options.binary_location = "C:/Program Files/Google/Chrome/Application/chrome.exe"
+        print("options.BinaryLocation", options.binary_location)
+
+        # test = webdriver.Chrome(executable_path="C:/chromedriver/chromedriver.exe")
+        # print(test)
 
         if not self.debug:
             options.add_argument("--headless")

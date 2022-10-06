@@ -5,6 +5,9 @@ from multiprocessing import Pool
 from termcolor import colored
 import argparse
 import csv
+from datetime import datetime
+from pathlib import Path
+import traceback
 
 ind = {'most_relevant' : 0 , 'newest' : 1, 'highest_rating' : 2, 'lowest_rating' : 3 }
 HEADER = ['id_review', 'caption', 'relative_date', 'retrieval_date', 'rating', 'username', 'n_review_user', 'n_photo_user', 'url_user']
@@ -25,17 +28,22 @@ def csv_writer(source_field, ind_sort_by, path='data/2022/09/19/'):
 
 def do_the_job(row, args, logger):
     logger.info('doing the job')
-    writer = csv_writer(args.source, row['name'].strip().lower().replace(" ", "-"))
+    now = datetime.now().strftime("data/%Y/%m/%d/")
+    Path(now).mkdir(exist_ok=True,parents=True)
+    writer = csv_writer(args.source, row['name'].strip().lower().replace(" ", "-"), path=now)
     logger.info('writer created')
     with GoogleMapsScraper(args.debug) as scraper:
         url = row['url']
+        print(url)
         logger.info('scrapping...')
         error = scraper.sort_by(url, ind[args.sort_by])
-        if error == 0:
+        if True:
             n = 0
             logger.info(url)
             logger.info('\t' + url + ' review ' + str(n))
             while n < int(row['limit']):
+
+                print(n)
 
                 reviews = scraper.get_reviews(writer)
 
@@ -45,8 +53,9 @@ def do_the_job(row, args, logger):
 def callback(some):
     print(colored("deu bom"));
 
-def error_callback(some):
-    print(colored("deu ruim"));
+def error_callback(error):
+    print(f"error: {error}")
+    print(colored("deu ruim"))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Google Maps reviews scraper.')
