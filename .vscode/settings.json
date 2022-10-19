@@ -1,0 +1,5 @@
+{
+    "workbench.localHistory.exclude": {
+        "**/__pycache__": true
+    }
+}

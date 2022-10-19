@@ -1,53 +1,53 @@
-# Google Maps Scraper
-Scraper of Google Maps reviews.
-The code allows to extract the **most recent** reviews starting from the url of a specific Point Of Interest (POI) in Google Maps.
-An additional extension helps to monitor and incrementally store the reviews in a MongoDB instance.
+# Manual de utilização do scraper localmente no windows
 
-## Installation
-Follow these steps to use the scraper:
-- Download Chromedrive from [here](https://chromedriver.storage.googleapis.com/index.html?path=2.45/).
-- Install Python packages from requirements file, either using pip, conda or virtualenv:
+Para rodar em uma máquina windows, é necessário uma instalação do google chrome,
+uma instalação de python 3.9, uma instalação de java, e os arquivos
+chromedrive.exe e selenium-server-x.x.x.jar.
 
-        conda create --name scraping python=3.6 --file requirements.txt
+Para a instalação tanto do python quanto do java, recomendo a utilização do conda,
+como mostro no passo a passo abaixo.
 
-**Note**: Python >= 3.6 is required.
+1. Instalação do miniconda
+    1. https://docs.conda.io/en/latest/miniconda.html
+    2. Utilizar primeiro instalador para windows, ou um instalador com versão python 3.9
+    3. Durante a instalação, adicionar o miniconda ao path
+2. Teste da instalação do miniconda
+    1. Se tiver terminais abertos, feche-os
+    2. Abra um terminal (cmd)
+    3. Teste o comando ```conda -V```, que deve retornar algo do tipo: ```conda 4.10.3```
+3. Criação do ambiente conda
+    1. Em um terminal, mude para a pasta raiz deste repositório
+    2. Crie o ambiente scraping com o comando ```conda create -n scraping python=3.9```
+    3. Entre no ambiente com o comando ```conda activate scraping```
+    4. Teste a instalação do python com o comando ```python -V```, que deve retornar algo do tipo: ```Python 3.9.13```
+4. Instalação dos pacotes do projeto
+    1. Se já não estiver ativado, ative o ambiente com o comando ```conda activate scraping```
+    2. Instale os pacotes usando o comando ```pip install -r requirements.txt```
+5. Instalação do java no ambiente conda
+    1. Se já não estiver ativado, ative o ambiente com o comando ```conda activate scraping```
+    2. Instale o java com o comando ```conda install -c conda-forge openjdk```
+    3. Teste a instalação com o comando ```java -version```, que deve retornar algo do tipo: ```java version "1.8.0_202"...```
+6. Download do google driver
+    1. Confira a versão do google chrome da sua máquina no link chrome://settings/help
+    2. Sua versão deve ser algo do tipo ```Versão 106.0.5249.103 (Versão oficial) 64 bits```
+    3. Baixe o chromedriver correspondente à sua versão no link https://chromedriver.chromium.org/downloads
+    4. Copie o chromedriver.exe pra a raiz desse repositório
+7. Download do selenium server
+    1. Baixe o selenium server no link https://www.selenium.dev/downloads/
+    2. A versão que utilizei é a 4.5.0, disponível no link https://github.com/SeleniumHQ/selenium/releases/download/selenium-4.5.0/selenium-server-4.5.0.jar
+    3. Copie o arquivo .jar para a raiz desse repositório
+8. Teste toda a aplicação
+    1. Com o ambiente ativado, utilize o comando para ligar o servidor selenium ```java -jar selenium-server-4.5.0.jar standalone --host localhost```
+    2. Em outro terminal, ative o ambiente
+    3. Utilize o comando para testar a aplicação ```python scraper.py --i input\urls_test.csv```
+    4. Verifique a saída na pasta data/ano/mes/dia/*.csv
 
-## Basic Usage
-The scraper.py script needs two main parameters as input:
-- `--i`: input file name, containing a list of urls that point to Google Maps place reviews (default: _urls.txt_)
-- `--N`: number of reviews to retrieve, starting from the most recent (default: 100)
+# Ajuda
 
-Example:
-
-  `python scraper.py --N 50`
-
-generates a csv file containing last 50 reviews of places present in _urls.txt_
-
-In current implementation, the CSV file is handled as an external function, so if you want to change path and/or name of output file, you need to modify that function.
-
-Additionally, other parameters can be provided:
-- `--place`: boolean value that allows to scrape POI metadata instead of reviews (default: false)
-- `--debug`: boolean value that allows to run the browser using the graphical interface (default: false)
-- `--source`: boolean value that allows to store source URL as additional field in CSV (default: false)
-- `--sort-by`: string value among most_relevant, newest, highest_rating or lowest_rating (default: newest), developed by @quaesito and that allows to change sorting behavior of reviews
-
-For a basic description of logic and approach about this software development, have a look at the [Medium post](https://towardsdatascience.com/scraping-google-maps-reviews-in-python-2b153c655fc2)
-
-## Monitoring functionality
-The monitor.py script can be used to have an incremental scraper and override the limitation about the number of reviews that can be retrieved.
-The only additional requirement is to install MongoDB on your laptop: you can find a detailed guide on the [official site](https://docs.mongodb.com/manual/installation/)
-
-The script takes two input:
-- `--i`: same as monitor.py script
-- `--from-date`: string date in the format YYYY-MM-DD, gives the minimum date that the scraper tries to obtain
-
-The main idea is to **periodically** run the script to obtain latest reviews: the scraper stores them in MongoDB up to get either the latest review of previous run or the day indicated in the input parameter.
-
-Take a look to this [Medium post](https://medium.com/@mattiagasparini2/monitoring-of-google-maps-reviews-29e5d35f9d17) to have more details about the idea behind this feature.
-
-## Notes
-Url must be provided as expected, you can check the example file urls.txt to have an idea of what is a correct url.
-If you want to generate the correct url:
-1. Go to Google Maps and look for a specific place;
-2. Click on the number of reviews in the parenthesis;
-3. Save the url that is generated from previous interaction.
+1. Instalação do java fora do conda
+    1. Baixe alguma versão do java SDK https://www.oracle.com/java/technologies/downloads/#java17
+    2. Utilize o vídeo para guiar a instalação e posterior configuração da variável de ambiente
+    3. https://www.youtube.com/watch?v=IJ-PJbvJBGs
+    4. Se tiver terminais abertos, feche-os
+    5. Abra um terminal (cmd)
+    6. Teste o comando ```java -version```, que deve retornar algo do tipo: ```java version "1.8.0_202"...```

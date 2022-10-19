@@ -1,11 +1,12 @@
 import logging
-from customformater import CustomFormatter
+from src.customformater import CustomFormatter
 
-def get_logger(logger_name = 'logger'):
+
+def get_logger(logger_name="logger"):
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.DEBUG)
 
-    fh = logging.FileHandler('logs/' + logger_name + '.log')
+    fh = logging.FileHandler("logs/" + logger_name + ".log")
     fh.setLevel(logging.DEBUG)
 
     fh.setFormatter(CustomFormatter())

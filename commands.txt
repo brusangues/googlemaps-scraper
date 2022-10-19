@@ -1,3 +1,7 @@
 java -jar selenium-server-4.5.0.jar standalone --host localhost
 
 python scraper.py --i urls.csv --sort_by "most_relevant"
+
+python scraper.py --i urls.csv --place --source --processes 8
+
+python scraper.py --i input/urls_test.csv --place --source --processes 8
