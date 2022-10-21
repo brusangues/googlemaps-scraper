@@ -12,6 +12,7 @@ import time
 import traceback
 import numpy as np
 import itertools
+import re
 
 from src.customlogger import get_logger
 
@@ -24,8 +25,9 @@ MAX_SCROLLS = 40
 class GoogleMapsScraper:
     def __init__(self, debug=False):
         self.debug = debug
-        self.logger = get_logger("scraper")
-        self.driver = self.__get_driver()
+        self.logger = get_logger("googlemaps")
+        # self.driver = self.__get_chrome_driver()
+        self.driver = self.__get_firefox_driver()
 
     def __enter__(self):
         return self
@@ -129,7 +131,7 @@ class GoogleMapsScraper:
                 self.driver.get(search_point_url)
             except NoSuchElementException:
                 self.driver.quit()
-                self.driver = self.__get_driver()
+                self.driver = self.__get_chrome_driver()
                 self.driver.get(search_point_url)
 
             # Gambiarra to load all places into the page
@@ -206,17 +208,19 @@ class GoogleMapsScraper:
 
         return search_urls
 
-    def get_reviews(self, writer):
+    def get_reviews(self, writer, n_reviews=10):
+        l = int(n_reviews / 10 + 1)
+        for i in range(l):
+            self.logger.info(f"Scrolling {i}/{l}")
+            # scroll to load reviews
+            self.__scroll()
 
-        # scroll to load reviews
+            # wait for other reviews to load (ajax)
+            time.sleep(1)
 
-        # wait for other reviews to load (ajax)
-        time.sleep(4)
-
-        self.__scroll()
-
-        # expand review text
-        self.__expand_reviews()
+            # expand review text
+            self.__expand_reviews()
+            time.sleep(1)
 
         # parse reviews
         response = BeautifulSoup(self.driver.page_source, "html.parser")
@@ -224,12 +228,12 @@ class GoogleMapsScraper:
         rblock = response.find_all("div", class_="jftiEf fontBodyMedium")
         parsed_reviews = []
 
-        for review in rblock:
+        l = len(rblock)
+        for i, review in enumerate(rblock):
+            self.logger.info(f"Parsing {i}/{l}")
             parsed = self.__parse(review)
             parsed_reviews.append(parsed)
             writer.writerow(parsed.values())
-            # logging to std out
-            # print(parsed)
 
         return parsed_reviews
 
@@ -254,12 +258,16 @@ class GoogleMapsScraper:
             # TODO: Subject to changes
             id_review = review["data-review-id"]
         except Exception as e:
+            self.logger.error("error parsing id_review")
+            self.logger.exception(e)
             id_review = None
 
         try:
             # TODO: Subject to changes
             username = review["aria-label"]
         except Exception as e:
+            self.logger.error("error parsing username")
+            self.logger.exception(e)
             username = None
 
         try:
@@ -268,18 +276,25 @@ class GoogleMapsScraper:
                 review.find("span", class_="wiI7pd").text
             )
         except Exception as e:
+            self.logger.error("error parsing review_text")
+            self.logger.exception(e)
             review_text = None
 
         try:
             # TODO: Subject to changes
             rating = float(review.find("span", class_="fzvQIb").text.split("/")[0])
         except Exception as e:
+            self.logger.error("error parsing rating")
+            self.logger.exception(e)
             rating = None
 
         try:
             # TODO: Subject to changes
-            relative_date = review.find("span", class_="rsqaWe").text
+            relative_date = review.find("span", class_="xRkPPb").text
+            relative_date = re.sub("( on | em ).*", "", relative_date)
         except Exception as e:
+            self.logger.error("error parsing relative_date")
+            self.logger.exception(e)
             relative_date = None
 
         try:
@@ -304,6 +319,8 @@ class GoogleMapsScraper:
         try:
             user_url = review.find("a")["href"]
         except Exception as e:
+            self.logger.error("error parsing user_url")
+            self.logger.exception(e)
             user_url = None
 
         item["id_review"] = id_review
@@ -355,7 +372,7 @@ class GoogleMapsScraper:
         )
         for l in links:
             l.click()
-        time.sleep(2)
+            time.sleep(0.01)
 
     def __scroll(self):
         # TODO: Subject to changes
@@ -367,16 +384,13 @@ class GoogleMapsScraper:
         )
         # self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
-    def __get_driver(self):
+    def __get_chrome_driver(self):
         self.logger.info("iniciando webdriver")
         options = webdriver.ChromeOptions()
         options.binary_location = (
             "C:/Program Files/Google/Chrome/Application/chrome.exe"
         )
-        print("options.BinaryLocation", options.binary_location)
-
-        # test = webdriver.Chrome(executable_path="C:/chromedriver/chromedriver.exe")
-        # print(test)
+        self.logger.info(f"options.BinaryLocation {options.binary_location}")
 
         if not self.debug:
             options.add_argument("--headless")
@@ -384,11 +398,52 @@ class GoogleMapsScraper:
             options.add_argument("--window-size=1366,768")
 
         options.add_argument("--disable-notifications")
-        options.add_argument("--lang=en-GB")
+        # options.add_argument("--lang=en-GB")
+        options.add_argument("--lang=en-US")
         input_driver = webdriver.Remote(
             "http://localhost:4444/wd/hub", DesiredCapabilities.CHROME, options=options
         )
-        self.logger.info("webdriver carregado")
+        self.logger.info("webdriver chrome carregado")
+
+        # first lets click on google agree button so we can continue
+        try:
+            input_driver.get(GM_WEBPAGE)
+            agree = WebDriverWait(input_driver, 10).until(
+                EC.element_to_be_clickable(
+                    (By.XPATH, '//span[contains(text(), "I agree")]')
+                )
+            )
+            agree.click()
+
+            # back to the main page
+            input_driver.switch_to_default_content()
+        except:
+            pass
+
+        return input_driver
+
+    def __get_firefox_driver(self):
+        self.logger.info("iniciando webdriver")
+        options = webdriver.FirefoxOptions()
+        options.binary_location = "C:/Program Files/Mozilla Firefox/firefox.exe"
+        self.logger.info(f"options.BinaryLocation {options.binary_location}")
+
+        if not self.debug:
+            options.add_argument("--headless")
+        else:
+            options.add_argument("--window-size=1366,768")
+
+        options.add_argument("--disable-notifications")
+        # options.add_argument("--lang=en-GB")
+        # options.add_argument("--lang=en-US")
+        options.set_preference("intl.accept_languages", "en-US")
+        # input_driver = webdriver.Remote(
+        #     "http://localhost:4444/wd/hub", DesiredCapabilities.FIREFOX, options=options
+        # )
+        input_driver = webdriver.Remote(
+            "http://localhost:4444/wd/hub", options.to_capabilities()
+        )
+        self.logger.info("webdriver firefox carregado")
 
         # first lets click on google agree button so we can continue
         try:
@@ -408,6 +463,7 @@ class GoogleMapsScraper:
         return input_driver
 
     # util function to clean special characters
-    def __filter_string(self, str):
-        strOut = str.replace("\r", " ").replace("\n", " ").replace("\t", " ")
-        return strOut
+    def __filter_string(self, s):
+        s = re.sub("\s", " ", s)
+        s = re.sub('"', "'", s)
+        return s

@@ -12,7 +12,7 @@ def get_logger(logger_name="logger"):
     fh.setFormatter(CustomFormatter())
 
     ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
+    ch.setLevel(logging.INFO)
 
     ch.setFormatter(CustomFormatter())
 

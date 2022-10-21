@@ -8,8 +8,14 @@ import csv
 from datetime import datetime
 from pathlib import Path
 import traceback
+import logging
 
-ind = {"most_relevant": 0, "newest": 1, "highest_rating": 2, "lowest_rating": 3}
+sorting_enumeration = {
+    "most_relevant": 0,
+    "newest": 1,
+    "highest_rating": 2,
+    "lowest_rating": 3,
+}
 HEADER = [
     "id_review",
     "caption",
@@ -21,68 +27,57 @@ HEADER = [
     "n_photo_user",
     "url_user",
 ]
-HEADER_W_SOURCE = [
-    "id_review",
-    "caption",
-    "relative_date",
-    "retrieval_date",
-    "rating",
-    "username",
-    "n_review_user",
-    "n_photo_user",
-    "url_user",
-    "url_source",
-]
 
 
-def csv_writer(source_field, ind_sort_by, path="data/2022/09/19/"):
-    outfile = ind_sort_by + "-gm-reviews.csv"
-    targetfile = open(path + outfile, mode="a", encoding="utf-8", newline="\n")
-    writer = csv.writer(targetfile, quoting=csv.QUOTE_MINIMAL)
+def call_scraper(row, args, logger):
+    print("initializing scraper")
 
-    if source_field:
-        h = HEADER_W_SOURCE
-    else:
-        h = HEADER
-    writer.writerow(h)
+    # Cria pasta se não existir
+    path = datetime.now().strftime("data/%Y/%m/%d/")
+    Path(path).mkdir(exist_ok=True, parents=True)
 
-    return writer
+    # Configura nome do arquivo
+    file_name = row["name"].strip().lower().replace(" ", "-")
+    file_name = file_name + "-gm-reviews.csv"
 
+    # Cria csv_writer
+    with open(path + file_name, "a", encoding="utf-8", newline="\n") as f:
+        writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+        print("writer created")
 
-def do_the_job(row, args, logger):
-    logger.info("doing the job")
-    now = datetime.now().strftime("data/%Y/%m/%d/")
-    Path(now).mkdir(exist_ok=True, parents=True)
-    writer = csv_writer(
-        args.source, row["name"].strip().lower().replace(" ", "-"), path=now
-    )
-    logger.info("writer created")
-    with GoogleMapsScraper(args.debug) as scraper:
-        url = row["url"]
-        print(url)
-        logger.info("scrapping...")
-        error = scraper.sort_by(url, ind[args.sort_by])
-        if True:
-            n = 0
-            logger.info(url)
-            logger.info("\t" + url + " review " + str(n))
-            while n < int(row["limit"]):
+        # Define e escreve header no csv
+        header_line = HEADER
+        if args.source:
+            header_line += ["url_source"]
+        writer.writerow(header_line)
+        print("header written")
 
-                print(n)
+        # Inicializa objeto scraper
+        with GoogleMapsScraper(args.debug) as scraper:
+            url = row["url"]
+            print(f"url: {url}")
+            print("scrapping...")
 
-                reviews = scraper.get_reviews(writer)
+            sort_result = scraper.sort_by(url, sorting_enumeration[args.sort_by])
+            print(f"sort_result: {sort_result}")
 
-                n += len(reviews)
-                logger.info("\t" + url + " review " + str(n))
+            n_reviews = int(row["limit"])
+            reviews = scraper.get_reviews(writer, n_reviews)
+            # n = 0
+            # print(f"\t{url} review: {n}")
+            # while n < int(row["limit"]):
+            #     reviews = scraper.get_reviews(writer)
+
+            #     n += len(reviews)
+            #     print(f"\t{url} review: {n}")
 
 
 def callback(some):
-    print(colored("deu bom"))
+    print("success callback")
 
 
 def error_callback(error):
-    print(f"error: {error}")
-    print(colored("deu ruim"))
+    print(f"error callback: {error}\n{traceback.print_exc()}")
 
 
 if __name__ == "__main__":
@@ -119,13 +114,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     results = []
-    logger = get_logger("main")
+    logger = get_logger("")
     try:
         with open(args.i, newline="") as csvfile:
             with Pool(processes=args.processes) as pool:
-                for row in csv.DictReader(csvfile, delimiter=",", quotechar="|"):
+                for row in csv.DictReader(csvfile, delimiter=",", quotechar='"'):
                     result = pool.apply_async(
-                        do_the_job,
+                        call_scraper,
                         (row, args, logger),
                         callback=callback,
                         error_callback=error_callback,
